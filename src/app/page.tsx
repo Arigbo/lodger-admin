@@ -50,8 +50,8 @@ export default function DashboardPage() {
 
                             <div className="flex items-center gap-2">
                                 <div className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${stat.trend === 'up' ? 'bg-emerald-500/10 text-emerald-500' :
-                                        stat.trend === 'down' ? 'bg-rose-500/10 text-rose-500' :
-                                            'bg-white/10 text-white/60'
+                                    stat.trend === 'down' ? 'bg-rose-500/10 text-rose-500' :
+                                        'bg-white/10 text-white/60'
                                     }`}>
                                     {stat.change}
                                 </div>
@@ -107,4 +107,3 @@ export default function DashboardPage() {
         </div>
     );
 }
-vacation

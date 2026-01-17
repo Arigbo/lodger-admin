@@ -42,7 +42,7 @@ export default function UsersPage() {
             try {
                 const q = query(collection(db, 'users'), limit(50));
                 const querySnapshot = await getDocs(q);
-                const usersList = querySnapshot.docs.map(doc => ({
+                const usersList = querySnapshot.docs.map((doc: any) => ({
                     id: doc.id,
                     ...doc.data()
                 })) as UserProfile[];
@@ -192,4 +192,3 @@ export default function UsersPage() {
         </div>
     );
 }
-vacation
