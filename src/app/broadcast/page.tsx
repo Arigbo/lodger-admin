@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth, getIdToken } from 'firebase/auth';
 
 const targetFilters = [
     { id: 'all', name: 'Everyone', icon: Users },
@@ -34,7 +35,9 @@ export default function BroadcastPage() {
     const [target, setTarget] = useState('all');
     const [type, setType] = useState('info'); // info, warning, success
     const [isSending, setIsSending] = useState(false);
+    const [sendEmail, setSendEmail] = useState(false);
     const [sentStatus, setSentStatus] = useState<null | 'success' | 'error'>(null);
+    const [sentCount, setSentCount] = useState(0);
 
     const handleBroadcast = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,13 +45,49 @@ export default function BroadcastPage() {
 
         setIsSending(true);
         try {
-            // In a real scenario, this would trigger a cloud function
-            // Here we log the broadcast to a collection
+            const auth = getAuth();
+            const user = auth.currentUser;
+            
+            if (!user) {
+                console.error("No authenticated user found for broadcast.");
+                setSentStatus('error');
+                return;
+            }
+
+            const token = await getIdToken(user);
+
+            // Call the new Broadcast API in the main lodger app
+            const response = await fetch('https://lodger-ten.vercel.app/api/broadcast', { // Assuming production URL or using env
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    title,
+                    message,
+                    target,
+                    type,
+                    sendEmail
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to dispatch broadcast');
+            }
+
+            const data = await response.json();
+            setSentCount(data.count || 0);
+            
+            // Log to local history as well
             await addDoc(collection(db, 'broadcastMessages'), {
                 title,
                 message,
                 target,
                 type,
+                sendEmail,
+                recipients: data.count || 0,
                 timestamp: serverTimestamp(),
                 sentBy: 'Admin Console'
             });
@@ -122,22 +161,42 @@ export default function BroadcastPage() {
                                 </div>
                             </div>
 
-                            <div className="flex items-end">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 pl-1">Delivery Protocol</label>
                                 <button
-                                    type="submit"
-                                    disabled={isSending}
-                                    className="w-full h-14 rounded-2xl bg-primary text-black font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                                >
-                                    {isSending ? (
-                                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            <Send className="h-4 w-4" />
-                                            Dispatch Now
-                                        </>
+                                    type="button"
+                                    onClick={() => setSendEmail(!sendEmail)}
+                                    className={cn(
+                                        "w-full h-14 rounded-xl border font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-3",
+                                        sendEmail
+                                            ? "bg-white text-black border-white"
+                                            : "bg-white/5 border-white/10 text-white/40 hover:text-white"
                                     )}
+                                >
+                                    <Mail className={cn("h-4 w-4", sendEmail ? "text-black" : "text-white/20")} />
+                                    {sendEmail ? "Email Enabled" : "In-App Only"}
                                 </button>
                             </div>
+                        </div>
+
+                        <div className="pt-4">
+                            <button
+                                type="submit"
+                                disabled={isSending}
+                                className="w-full h-20 rounded-2xl bg-primary text-black font-black uppercase tracking-widest text-base shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-4 disabled:opacity-50"
+                            >
+                                {isSending ? (
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-6 h-6 border-3 border-black/30 border-t-black rounded-full animate-spin" />
+                                        <span>Dispatching Signal...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Send className="h-5 w-5" />
+                                        Dispatch to {target === 'all' ? 'Entire Grid' : target}
+                                    </>
+                                )}
+                            </button>
                         </div>
 
                         {sentStatus === 'success' && (
@@ -146,7 +205,7 @@ export default function BroadcastPage() {
                                     <CheckCircle2 className="h-10 w-10 text-black" />
                                 </div>
                                 <h3 className="text-2xl font-black uppercase text-black tracking-tighter">Broadcast Dispatched</h3>
-                                <p className="text-black/60 font-bold uppercase tracking-widest text-[10px] mt-2">Notification is propagating through the network</p>
+                                <p className="text-black/60 font-bold uppercase tracking-widest text-[10px] mt-2">Reached {sentCount} nodes across the tactical grid</p>
                             </div>
                         )}
                     </form>
