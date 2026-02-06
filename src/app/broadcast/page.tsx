@@ -61,7 +61,7 @@ export default function BroadcastPage() {
             const apiBase = process.env.NEXT_PUBLIC_BROADCAST_API_URL || 
                            (typeof window !== 'undefined' && window.location.port === '3001' 
                             ? 'http://localhost:3000' 
-                            : 'https://lodger-ten.vercel.app');
+                            : 'https://lodger-admin.vercel.app');
             
             const response = await fetch(`${apiBase}/api/broadcast`, {
                 method: 'POST',
