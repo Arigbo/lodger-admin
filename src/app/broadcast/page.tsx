@@ -79,6 +79,11 @@ export default function BroadcastPage() {
 
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('[Broadcast] API Error Response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorData: errorData
+                });
                 throw new Error(errorData.error || 'Failed to dispatch broadcast');
             }
 
