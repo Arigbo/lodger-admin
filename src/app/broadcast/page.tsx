@@ -56,8 +56,14 @@ export default function BroadcastPage() {
 
             const token = await getIdToken(user);
 
-            // Call the new Broadcast API in the main lodger app
-            const response = await fetch('https://lodger-ten.vercel.app/api/broadcast', { // Assuming production URL or using env
+            // Dynamic API URL: Prioritize env variable, fallback to relative path if on same domain, 
+            // or use a smart default for local dev.
+            const apiBase = process.env.NEXT_PUBLIC_BROADCAST_API_URL || 
+                           (typeof window !== 'undefined' && window.location.port === '3001' 
+                            ? 'http://localhost:3000' 
+                            : 'https://lodger-ten.vercel.app');
+            
+            const response = await fetch(`${apiBase}/api/broadcast`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
