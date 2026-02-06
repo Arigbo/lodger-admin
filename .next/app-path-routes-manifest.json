@@ -1,1 +1,1 @@
-{"/_not-found/page":"/_not-found","/login/page":"/login","/broadcast/page":"/broadcast","/leases/page":"/leases","/page":"/","/overview/page":"/overview","/moderation/page":"/moderation","/users/page":"/users","/users/[id]/page":"/users/[id]"}
+{"/_not-found/page":"/_not-found","/broadcast/page":"/broadcast","/moderation/page":"/moderation","/auth/login/page":"/auth/login","/auth/signup/page":"/auth/signup","/page":"/","/leases/page":"/leases","/overview/page":"/overview","/users/[id]/page":"/users/[id]","/users/page":"/users"}

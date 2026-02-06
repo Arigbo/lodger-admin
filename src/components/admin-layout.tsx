@@ -15,8 +15,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (!currentUser && pathname !== '/login') {
-                router.push('/login');
+            const isAuthPath = pathname.startsWith('/auth');
+            const isRootPath = pathname === '/';
+            
+            if (!currentUser && !isAuthPath && !isRootPath) {
+                router.push('/auth/login');
             } else {
                 setUser(currentUser);
             }
@@ -34,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
     }
 
-    if (!user && pathname === '/login') {
+    if (!user && (pathname.startsWith('/auth') || pathname === '/')) {
         return <>{children}</>;
     }
 
