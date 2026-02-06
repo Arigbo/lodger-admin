@@ -53,7 +53,8 @@ export default function BroadcastPage() {
                 return;
             }
 
-            const token = await getIdToken(user);
+            // Force token refresh to prevent expired token errors
+            const token = await getIdToken(user, true);
 
             // Dynamic API URL: Prioritize env variable, fallback to relative path if on same domain, 
             // or use a smart default for local dev.
