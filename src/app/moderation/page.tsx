@@ -20,7 +20,8 @@ import {
     User,
     ShieldAlert,
     Clock,
-    Eye
+    Eye,
+    ArrowUpRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,23 +39,24 @@ interface UserReport {
 export default function ModerationPage() {
     const [reports, setReports] = useState<UserReport[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchReports() {
             try {
                 const q = query(collection(db, 'userReports'), limit(50));
                 const querySnapshot = await getDocs(q);
+                if (querySnapshot.empty) {
+                    console.log("No reports found in 'userReports' collection.");
+                }
                 const reportsList = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 })) as UserReport[];
                 setReports(reportsList);
-            } catch (error) {
-                console.error("Error fetching reports:", error);
-                setReports([
-                    { id: 'R1', reportedUserId: 'U1', reportedUserName: 'Marcus Chen', reporterId: 'U2', reason: 'Spam', description: 'User is posting fake properties repeatedly.', status: 'pending', createdAt: null },
-                    { id: 'R2', reportedUserId: 'U3', reportedUserName: 'Sarah West', reporterId: 'U4', reason: 'Harassment', description: 'Aggressive messages in the chat.', status: 'pending', createdAt: null },
-                ]);
+            } catch (err: any) {
+                console.error("Error fetching reports:", err);
+                setError(err.message || "Unknown error fetching data");
             } finally {
                 setLoading(false);
             }
@@ -109,6 +111,14 @@ export default function ModerationPage() {
                                     <TableCell colSpan={5} className="h-24 text-center text-white/20 animate-pulse">Running security audit...</TableCell>
                                 </TableRow>
                             ))
+                        ) : error ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-32 text-center text-red-500 font-bold">
+                                    Error loading reports: {error}
+                                    <br />
+                                    <span className="text-xs text-white/40 font-normal">Check console for details. Ensure you are logged in as admin@lodger.com</span>
+                                </TableCell>
+                            </TableRow>
                         ) : reports.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="h-32 text-center text-white/40">No pending security reports currently detected.</TableCell>
@@ -214,4 +224,4 @@ export default function ModerationPage() {
         </div>
     );
 }
-vacation
+

@@ -1,4 +1,4 @@
-// File: C:\Users\user\Desktop\lodger-admin\src\app\moderation\page.tsx
+// File: C:\Users\HP\Desktop\lodger-admin\src\app\moderation\page.tsx
 import * as entry from '../../../../src/app/moderation/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

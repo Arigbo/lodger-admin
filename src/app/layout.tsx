@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
-// import { Inter } from "next/font/google";
+import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import AdminLayout from "@/components/admin-layout";
 
-// const inter = Inter({ subsets: ["latin"] });
+const spaceGrotesk = Space_Grotesk({
+    subsets: ["latin"],
+    variable: "--font-headline",
+});
+
+const inter = Inter({
+    subsets: ["latin"],
+    variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
     title: "Lodger Admin",
@@ -17,7 +25,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark">
-            <body className={`font-sans bg-[#050505]`}>
+            <body className={`${spaceGrotesk.variable} ${inter.variable} font-sans bg-[#050505] text-white antialiased selection:bg-primary/30`}>
                 <AdminLayout>{children}</AdminLayout>
             </body>
         </html>

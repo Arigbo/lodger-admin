@@ -38,24 +38,25 @@ interface LeaseAgreement {
 export default function LeasesPage() {
     const [leases, setLeases] = useState<LeaseAgreement[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchLeases() {
             try {
                 const q = query(collection(db, 'leaseAgreements'), limit(50));
                 const querySnapshot = await getDocs(q);
+                if (querySnapshot.empty) {
+                    console.log("No leases found in 'leaseAgreements' collection.");
+                }
                 const leasesList = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 })) as LeaseAgreement[];
                 setLeases(leasesList);
-            } catch (error) {
-                console.error("Error fetching leases:", error);
-                setLeases([
-                    { id: 'L1', propertyId: 'P1', landlordId: 'U1', tenantId: 'U2', status: 'active', startDate: '2024-01-01', endDate: '2025-01-01', price: 1200 },
-                    { id: 'L2', propertyId: 'P2', landlordId: 'U3', tenantId: 'U4', status: 'pending', startDate: '2024-03-01', endDate: '2025-03-01', price: 950 },
-                    { id: 'L3', propertyId: 'P3', landlordId: 'U5', tenantId: 'U6', status: 'expired', startDate: '2023-01-01', endDate: '2024-01-01', price: 800 },
-                ]);
+            } catch (err: any) {
+                console.error("Error fetching leases:", err);
+                setError(err.message || "Unknown error fetching data");
+                // Do NOT set dummy data
             } finally {
                 setLoading(false);
             }
@@ -124,6 +125,14 @@ export default function LeasesPage() {
                                     <TableCell colSpan={6} className="h-16 text-center text-white/20 animate-pulse">Scanning blockchain/database records...</TableCell>
                                 </TableRow>
                             ))
+                        ) : error ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="h-32 text-center text-red-500 font-bold">
+                                    Error loading data: {error}
+                                    <br />
+                                    <span className="text-xs text-white/40 font-normal">Check console for details. Ensure you are logged in as admin@lodger.com</span>
+                                </TableCell>
+                            </TableRow>
                         ) : leases.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="h-32 text-center text-white/40">No lease agreements detected on the network.</TableCell>
@@ -187,4 +196,4 @@ export default function LeasesPage() {
         </div>
     );
 }
-vacation
+
