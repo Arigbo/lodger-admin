@@ -18,9 +18,9 @@ import {
     Layout
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth, getIdToken } from 'firebase/auth';
+import { getIdToken } from 'firebase/auth';
 
 const targetFilters = [
     { id: 'all', name: 'Everyone', icon: Users },
@@ -45,7 +45,6 @@ export default function BroadcastPage() {
 
         setIsSending(true);
         try {
-            const auth = getAuth();
             const user = auth.currentUser;
             
             if (!user) {
