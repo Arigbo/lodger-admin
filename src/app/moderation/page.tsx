@@ -186,7 +186,7 @@ export default function ModerationPage() {
           await addDoc(collection(db, "notifications"), {
             userId: report.reporterId,
             title: "Report Dismissed",
-            message: `Your report against ${report.reportedUserName} has been reviewed and dismissed.`,
+            message: `Your report against ${report.reportedUserName} was dismissed. Reason: ${customMessage}`,
             type: "info",
             read: false,
             createdAt: new Date().toISOString(),
