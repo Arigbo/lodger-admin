@@ -143,6 +143,16 @@ export default function ModerationPage() {
             participantIds: ["SYSTEM_MODERATION", report.reporterId],
           });
 
+          await addDoc(collection(db, "notifications"), {
+            userId: report.reporterId,
+            title: "Report Resolved",
+            message: `Your report against ${report.reportedUserName} has been resolved.`,
+            type: "success",
+            read: false,
+            createdAt: new Date().toISOString(),
+            link: "/student/notifications",
+          });
+
           // Notify Reported User
           await addDoc(collection(db, "messages"), {
             senderId: "SYSTEM_MODERATION",
@@ -151,6 +161,16 @@ export default function ModerationPage() {
             timestamp: serverTimestamp(),
             read: false,
             participantIds: ["SYSTEM_MODERATION", report.reportedUserId],
+          });
+
+          await addDoc(collection(db, "notifications"), {
+            userId: report.reportedUserId,
+            title: "Moderation Update",
+            message: `A report against your account has been resolved by our moderation team.`,
+            type: "info",
+            read: false,
+            createdAt: new Date().toISOString(),
+            link: "/student/notifications",
           });
         } else if (status === "dismissed" && customMessage) {
           // Notify Reporter with custom message
@@ -161,6 +181,16 @@ export default function ModerationPage() {
             timestamp: serverTimestamp(),
             read: false,
             participantIds: ["SYSTEM_MODERATION", report.reporterId],
+          });
+
+          await addDoc(collection(db, "notifications"), {
+            userId: report.reporterId,
+            title: "Report Dismissed",
+            message: `Your report against ${report.reportedUserName} has been reviewed and dismissed.`,
+            type: "info",
+            read: false,
+            createdAt: new Date().toISOString(),
+            link: "/student/notifications",
           });
         }
       }
