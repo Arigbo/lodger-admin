@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import {
   collection,
   query,
@@ -18,6 +18,8 @@ import {
   doc,
   updateDoc,
   getDoc,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import {
   AlertTriangle,
@@ -87,6 +89,10 @@ export default function ModerationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<UserReport | null>(null);
+  const [actionReport, setActionReport] = useState<{
+    report: UserReport;
+    status: "resolved" | "dismissed";
+  } | null>(null);
 
   useEffect(() => {
     async function fetchReports() {
@@ -114,13 +120,54 @@ export default function ModerationPage() {
   const handleResolveReport = async (
     reportId: string,
     status: "resolved" | "dismissed",
+    customMessage?: string,
   ) => {
     try {
+      const report = reports.find((r) => r.id === reportId);
+      if (!report) return;
+
       const reportRef = doc(db, "userReports", reportId);
       await updateDoc(reportRef, { status });
+
+      // Messaging Logic
+      if (auth.currentUser) {
+        if (status === "resolved") {
+          // Notify Reporter
+          await addDoc(collection(db, "messages"), {
+            senderId: "SYSTEM_MODERATION",
+            recipientId: report.reporterId,
+            text: `Your report against ${report.reportedUserName} has been resolved. Thank you for helping keep Lodger safe.`,
+            timestamp: serverTimestamp(),
+            read: false,
+            participantIds: ["SYSTEM_MODERATION", report.reporterId],
+          });
+
+          // Notify Reported User
+          await addDoc(collection(db, "messages"), {
+            senderId: "SYSTEM_MODERATION",
+            recipientId: report.reportedUserId,
+            text: `A report against your account has been resolved by our moderation team. Please ensure you continue to follow our community guidelines.`,
+            timestamp: serverTimestamp(),
+            read: false,
+            participantIds: ["SYSTEM_MODERATION", report.reportedUserId],
+          });
+        } else if (status === "dismissed" && customMessage) {
+          // Notify Reporter with custom message
+          await addDoc(collection(db, "messages"), {
+            senderId: "SYSTEM_MODERATION",
+            recipientId: report.reporterId,
+            text: `Your report against ${report.reportedUserName} has been reviewed and dismissed. Reason: ${customMessage}`,
+            timestamp: serverTimestamp(),
+            read: false,
+            participantIds: ["SYSTEM_MODERATION", report.reporterId],
+          });
+        }
+      }
+
       setReports(
         reports.map((r) => (r.id === reportId ? { ...r, status } : r)),
       );
+      setActionReport(null);
     } catch (error) {
       console.error("Error updating report:", error);
       alert("Failed to update report status.");
@@ -257,7 +304,7 @@ export default function ModerationPage() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() =>
-                          handleResolveReport(report.id, "resolved")
+                          setActionReport({ report, status: "resolved" })
                         }
                         className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-emerald-500/5 group-hover/row:scale-105"
                         title="Resolve Report"
@@ -266,7 +313,7 @@ export default function ModerationPage() {
                       </button>
                       <button
                         onClick={() =>
-                          handleResolveReport(report.id, "dismissed")
+                          setActionReport({ report, status: "dismissed" })
                         }
                         className="p-2.5 rounded-xl bg-white/5 text-white/40 hover:bg-rose-500/10 hover:text-rose-500 transition-all"
                         title="Dismiss Report"
@@ -328,6 +375,140 @@ export default function ModerationPage() {
           onClose={() => setSelectedReport(null)}
         />
       )}
+
+      {actionReport && (
+        <ReportActionDialog
+          report={actionReport.report}
+          status={actionReport.status}
+          onClose={() => setActionReport(null)}
+          onConfirm={(msg) =>
+            handleResolveReport(
+              actionReport.report.id,
+              actionReport.status,
+              msg,
+            )
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function ReportActionDialog({
+  report,
+  status,
+  onClose,
+  onConfirm,
+}: {
+  report: UserReport;
+  status: "resolved" | "dismissed";
+  onClose: () => void;
+  onConfirm: (msg?: string) => void;
+}) {
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    await onConfirm(status === "dismissed" ? message : undefined);
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-10 shadow-2xl relative">
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 p-2 rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <XCircle className="h-5 w-5" />
+        </button>
+
+        <div className="flex items-center gap-6 mb-8">
+          <div
+            className={cn(
+              "h-16 w-16 rounded-2xl flex items-center justify-center shrink-0",
+              status === "resolved"
+                ? "bg-emerald-500/10 text-emerald-500 shadow-[0_0_30px_-5px_rgba(16,185,129,0.3)]"
+                : "bg-rose-500/10 text-rose-500 shadow-[0_0_30px_-5px_rgba(244,63,94,0.3)]",
+            )}
+          >
+            {status === "resolved" ? (
+              <CheckCircle className="h-8 w-8" />
+            ) : (
+              <Flag className="h-8 w-8" />
+            )}
+          </div>
+          <div>
+            <h3 className="text-2xl font-black uppercase tracking-tighter">
+              {status === "resolved" ? "Resolve" : "Dismiss"}{" "}
+              <span className="text-primary italic">Report</span>
+            </h3>
+            <p className="text-xs font-bold text-white/40 uppercase tracking-widest mt-1">
+              Target: {report.reportedUserName}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {status === "resolved" ? (
+            <div className="p-6 rounded-2xl bg-white/5 border border-emerald-500/20 space-y-3">
+              <p className="text-sm font-medium text-white/70 leading-relaxed">
+                Resolving this report will notify both the reporter and the
+                target user. Automated safety confirmations will be dispatched.
+              </p>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase text-emerald-500 tracking-widest">
+                <ShieldAlert className="h-3 w-3" />
+                Standard Security Protocol
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-4">
+                  Reason for Dismissal
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Explain to the reporter why this report is being dismissed..."
+                  className="w-full h-32 bg-white/5 border border-white/5 rounded-2xl p-6 text-sm font-medium text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none transition-all"
+                />
+              </div>
+              <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.15em] px-4 leading-relaxed">
+                Your message will be sent directly to the reporter to ensure
+                transparent moderation.
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={handleConfirm}
+              disabled={loading || (status === "dismissed" && !message.trim())}
+              className={cn(
+                "flex-1 h-14 rounded-xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2",
+                status === "resolved"
+                  ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"
+                  : "bg-primary text-black hover:scale-[1.02] active:scale-[0.98]",
+              )}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {loading ? "Processing..." : `Confirm ${status}`}
+            </button>
+            <button
+              onClick={onClose}
+              className="px-8 h-14 rounded-xl bg-white/5 hover:bg-white/10 transition-colors font-black uppercase tracking-widest text-xs text-white/40 hover:text-white"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
