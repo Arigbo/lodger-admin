@@ -190,7 +190,7 @@ export default function ModerationPage() {
             type: "info",
             read: false,
             createdAt: new Date().toISOString(),
-            link: "/student/notifications",
+            link: "/student/messages",
           });
         }
       }
