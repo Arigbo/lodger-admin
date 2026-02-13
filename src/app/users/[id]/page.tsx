@@ -196,14 +196,25 @@ export default function UserProfilePage() {
   const handleDelete = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to permanently delete this user? This action cannot be undone.",
+        "Are you sure you want to permanently delete this user? This action will remove their access and all associated data, and cannot be undone.",
       )
     )
       return;
     try {
-      await deleteDoc(doc(db, "users", userId));
-      alert("User deleted successfully");
-      router.push("/users");
+      const response = await fetch("/api/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: userId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("User deleted successfully");
+        router.push("/users");
+      } else {
+        throw new Error(data.error || "Unknown error");
+      }
     } catch (err: any) {
       console.error("Error deleting user:", err);
       alert("Failed to delete user: " + err.message);
