@@ -11,6 +11,11 @@ export async function POST(request: Request) {
 
         console.log(`--- SECURE USER DELETION TRIGGERED: ${userId} ---`);
 
+        if (!adminAuth || !adminDb) {
+            console.error('Firebase Admin not initialized. Check environment variables.');
+            return NextResponse.json({ success: false, error: 'Internal Server Error: Database not available' }, { status: 500 });
+        }
+
         // 1. Delete from Firebase Auth
         try {
             await adminAuth.deleteUser(userId);
